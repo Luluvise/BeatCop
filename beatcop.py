@@ -8,7 +8,7 @@ Beatcop is loosely based on the locking patterns described at http://redis.io/co
 """
 
 import atexit
-import ConfigParser
+import configparser
 import logging
 import os
 import redis
@@ -18,6 +18,7 @@ import socket
 import subprocess
 import sys
 import time
+from functools import reduce
 
 try:
     import rediscluster
@@ -126,7 +127,7 @@ class BeatCop(object):
             log.error("Couldn't connect to Redis: %s", e.message)
             sys.exit(os.EX_NOHOST)
         # Check Redis version. The 'redis_version' key is absent in Redis Cluster, because redis_info is a dict of cluster nodes instead. In which case our Redis is definitely new enough.
-        if 'redis_version' in redis_info and reduce(lambda l,r: l*1000+r, map(int,redis_info['redis_version'].split('.'))) < 2006012:
+        if 'redis_version' in redis_info and reduce(lambda l,r: l*1000+r, list(map(int,redis_info['redis_version'].split('.')))) < 2006012:
             log.error("Redis too old. You got %s, minimum requirement is %s", redis_info['redis_version'], '2.6.12')
             sys.exit(os.EX_PROTOCOL)
         self.lockname = lockname or ("beatcop:%s" % (self.command))
@@ -211,14 +212,14 @@ class BeatCop(object):
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print "Usage: %s <ini_file>" % sys.argv[0]
+        print("Usage: %s <ini_file>" % sys.argv[0])
         sys.exit(os.EX_USAGE)
     config_file = sys.argv[1]
 
     logging.basicConfig(level=logging.INFO, format='%(asctime)s BeatCop: %(message)s', datefmt='%Y-%m-%d %H:%M:%S %Z')
     log = logging.getLogger()
 
-    conf = ConfigParser.SafeConfigParser()
+    conf = configparser.SafeConfigParser()
     conf.read(config_file)
     sections = conf.sections()
 
